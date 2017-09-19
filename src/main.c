@@ -402,6 +402,8 @@ static void InitializeAudio(int freq)
     DebugMessage(M64MSG_VERBOSE, "Silence: %i", hardware_spec->silence);
     DebugMessage(M64MSG_VERBOSE, "Samples: %i", hardware_spec->samples);
     DebugMessage(M64MSG_VERBOSE, "Size: %i", hardware_spec->size);
+
+    SDL_PauseAudioDevice(dev, 0);
 }
 EXPORT void CALL RomClosed( void )
 {
@@ -428,8 +430,6 @@ EXPORT void CALL ProcessAList(void)
 
 EXPORT void CALL SetSpeedFactor(int percentage)
 {
-    if (!l_PluginInit)
-        return;
 }
 
 static void ReadConfig(void)
