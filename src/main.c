@@ -38,7 +38,7 @@
 #include "osal_dynamiclib.h"
 
 /* This sets default frequency what is used if rom doesn't want to change it.
-   Probably only game that needs this is Zelda: Ocarina Of Time Master Quest 
+   Probably only game that needs this is Zelda: Ocarina Of Time Master Quest
    *NOTICE* We should try to find out why Demos' frequencies are always wrong
    They tend to rely on a default frequency, apparently, never the same one ;)*/
 #define DEFAULT_FREQUENCY 33600
@@ -67,6 +67,7 @@ static int SwapChannels = 0;
 // Muted or not
 static int VolIsMuted = 0;
 static int ff = 0;
+static int AudioDevice = -1;
 
 // Prototype of local functions
 static void InitializeAudio(int freq);
@@ -113,10 +114,10 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
                                    void (*DebugCallback)(void *, int, const char *))
 {
     ptr_CoreGetAPIVersions CoreAPIVersionFunc;
-    
+
     int ConfigAPIVersion, DebugAPIVersion, VidextAPIVersion, bSaveConfig;
     float fConfigParamsVersion = 0.0f;
-    
+
     if (l_PluginInit)
         return M64ERR_ALREADY_INIT;
 
@@ -131,7 +132,7 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
         DebugMessage(M64MSG_ERROR, "Core emulator broken; no CoreAPIVersionFunc() function found.");
         return M64ERR_INCOMPATIBLE;
     }
-    
+
     (*CoreAPIVersionFunc)(&ConfigAPIVersion, &DebugAPIVersion, &VidextAPIVersion, NULL);
     if ((ConfigAPIVersion & 0xffff0000) != (CONFIG_API_VERSION & 0xffff0000))
     {
@@ -200,6 +201,7 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
     ConfigSetDefaultFloat(l_ConfigAudio, "Version",             CONFIG_PARAM_VERSION,  "Mupen64Plus SDL Audio Plugin config parameter version number");
     ConfigSetDefaultInt(l_ConfigAudio, "DEFAULT_FREQUENCY",     DEFAULT_FREQUENCY,     "Frequency which is used if rom doesn't want to change it");
     ConfigSetDefaultBool(l_ConfigAudio, "SWAP_CHANNELS",        0,                     "Swaps left and right channels");
+    ConfigSetDefaultInt(l_ConfigAudio, "AUDIO_DEVICE", -1, "ID of audio playback device, -1 for default");
 
     if (bSaveConfig && ConfigAPIVersion >= 0x020100)
         ConfigSaveSection("Audio-SDL2");
@@ -235,7 +237,7 @@ EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *PluginType, int *Plugi
 
     if (APIVersion != NULL)
         *APIVersion = AUDIO_PLUGIN_API_VERSION;
-    
+
     if (PluginNamePtr != NULL)
         *PluginNamePtr = "Mupen64Plus SDL2 Audio Plugin";
 
@@ -243,7 +245,7 @@ EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *PluginType, int *Plugi
     {
         *Capabilities = 0;
     }
-                    
+
     return M64ERR_SUCCESS;
 }
 
@@ -359,12 +361,12 @@ static void InitializeAudio(int freq)
 {
     SDL_AudioSpec *desired, *obtained;
 
-    if(SDL_WasInit(SDL_INIT_AUDIO) == (SDL_INIT_AUDIO) ) 
+    if(SDL_WasInit(SDL_INIT_AUDIO) == (SDL_INIT_AUDIO))
     {
         DebugMessage(M64MSG_VERBOSE, "InitializeAudio(): SDL2 Audio sub-system already initialized.");
         SDL_CloseAudioDevice(dev);
     }
-    else 
+    else
     {
         DebugMessage(M64MSG_VERBOSE, "InitializeAudio(): Initializing SDL2 Audio");
         InitializeSDL();
@@ -379,7 +381,7 @@ static void InitializeAudio(int freq)
     obtained = malloc(sizeof(SDL_AudioSpec));
 
     desired->freq = GameFreq;
-    
+
     DebugMessage(M64MSG_VERBOSE, "Requesting frequency: %iHz.", desired->freq);
     /* 16-bit signed audio */
     desired->format=AUDIO_S16SYS;
@@ -390,8 +392,17 @@ static void InitializeAudio(int freq)
     desired->callback = NULL;
     desired->userdata = NULL;
 
+    int i, count = SDL_GetNumAudioDevices(0);
+
+    for (i = 0; i < count; ++i)
+        DebugMessage(M64MSG_INFO, "Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
+
     /* Open the audio device */
-    dev = SDL_OpenAudioDevice(NULL, 0, desired, obtained, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+    const char *dev_name = NULL;
+    if (AudioDevice >= 0)
+        dev_name = SDL_GetAudioDeviceName(AudioDevice, 0);
+
+    dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
     if (dev == 0)
     {
         DebugMessage(M64MSG_ERROR, "Couldn't open audio: %s", SDL_GetError());
@@ -427,7 +438,7 @@ EXPORT void CALL RomClosed( void )
    if (critical_failure == 1)
        return;
     DebugMessage(M64MSG_VERBOSE, "Cleaning up SDL sound plugin...");
-    
+
     // Shut down SDL Audio output
     SDL_CloseAudioDevice(dev);
 
@@ -456,6 +467,7 @@ static void ReadConfig(void)
     /* read the configuration values into our static variables */
     GameFreq = ConfigGetParamInt(l_ConfigAudio, "DEFAULT_FREQUENCY");
     SwapChannels = ConfigGetParamBool(l_ConfigAudio, "SWAP_CHANNELS");
+    AudioDevice = ConfigGetParamInt(l_ConfigAudio, "AUDIO_DEVICE");
 }
 
 EXPORT void CALL VolumeMute(void)
