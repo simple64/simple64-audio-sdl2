@@ -355,6 +355,9 @@ static void InitializeSDL(void)
     }
     critical_failure = 0;
 
+    int i, count = SDL_GetNumAudioDevices(0);
+    for (i = 0; i < count; ++i)
+        DebugMessage(M64MSG_INFO, "Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
 }
 
 static void InitializeAudio(int freq)
@@ -391,11 +394,6 @@ static void InitializeAudio(int freq)
     desired->samples = 1024;
     desired->callback = NULL;
     desired->userdata = NULL;
-
-    int i, count = SDL_GetNumAudioDevices(0);
-
-    for (i = 0; i < count; ++i)
-        DebugMessage(M64MSG_INFO, "Audio device %d: %s", i, SDL_GetAudioDeviceName(i, 0));
 
     /* Open the audio device */
     const char *dev_name = NULL;
