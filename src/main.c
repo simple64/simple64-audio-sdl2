@@ -66,6 +66,7 @@ static int GameFreq = DEFAULT_FREQUENCY;
 static int SwapChannels = 0;
 // Muted or not
 static int VolIsMuted = 0;
+static int ff = 0;
 
 // Prototype of local functions
 static void InitializeAudio(int freq);
@@ -204,6 +205,9 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
         ConfigSaveSection("Audio-SDL2");
 
     l_PluginInit = 1;
+    ff = 0;
+    VolIsMuted = 0;
+
     return M64ERR_SUCCESS;
 }
 
@@ -303,8 +307,19 @@ EXPORT void CALL AiLenChanged( void )
             primaryBuffer[ i + 3 ] = p[ i + 3 ];
         }
     }
-    if (!VolIsMuted)
-        SDL_QueueAudio(dev, primaryBuffer, LenReg);
+    if (!VolIsMuted && !ff)
+    {
+        unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
+        unsigned int acceptable_lag = (GameFreq * 0.150) * N64_SAMPLE_BYTES;
+        unsigned int diff = 0;
+        if (audio_queue > acceptable_lag)
+        {
+            diff = audio_queue - acceptable_lag;
+            diff &= ~3;
+        }
+        if (LenReg > diff)
+            SDL_QueueAudio(dev, primaryBuffer, LenReg - diff);
+    }
 }
 
 EXPORT int CALL InitiateAudio( AUDIO_INFO Audio_Info )
@@ -430,6 +445,10 @@ EXPORT void CALL ProcessAList(void)
 
 EXPORT void CALL SetSpeedFactor(int percentage)
 {
+    if (percentage > 100)
+        ff = 1;
+    else
+        ff = 0;
 }
 
 static void ReadConfig(void)
