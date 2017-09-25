@@ -68,6 +68,7 @@ static int SwapChannels = 0;
 static int VolIsMuted = 0;
 static int ff = 0;
 static int AudioDevice = -1;
+static SDL_AudioFormat orig_format = 0;
 
 // Prototype of local functions
 static void InitializeAudio(int freq);
@@ -320,7 +321,23 @@ EXPORT void CALL AiLenChanged( void )
             diff &= ~3;
         }
         if (LenReg > diff)
-            SDL_QueueAudio(dev, primaryBuffer, LenReg - diff);
+        {
+            if (orig_format)
+            {
+                SDL_AudioCVT cvt;
+                SDL_BuildAudioCVT(&cvt, orig_format, 2, GameFreq, hardware_spec->format, 2, GameFreq);
+                cvt.len = LenReg - diff;
+                cvt.buf = (Uint8 *) malloc(cvt.len * cvt.len_mult);
+                memcpy(cvt.buf, primaryBuffer, cvt.len);
+                SDL_ConvertAudio(&cvt);
+                SDL_QueueAudio(dev, cvt.buf, cvt.len_cvt);
+                free(cvt.buf);
+            }
+            else
+            {
+                SDL_QueueAudio(dev, primaryBuffer, LenReg - diff);
+            }
+        }
     }
 }
 
@@ -410,6 +427,11 @@ static void InitializeAudio(int freq)
     if (desired->format != obtained->format)
     {
         DebugMessage(M64MSG_WARNING, "Obtained audio format differs from requested.");
+        orig_format = desired->format;
+    }
+    else
+    {
+        orig_format = 0;
     }
     if (desired->freq != obtained->freq)
     {
