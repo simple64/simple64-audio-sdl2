@@ -43,10 +43,6 @@
    They tend to rely on a default frequency, apparently, never the same one ;)*/
 #define DEFAULT_FREQUENCY 33600
 
-/* number of bytes per sample */
-#define N64_SAMPLE_BYTES 4
-#define SDL_SAMPLE_BYTES 4
-
 /* local variables */
 static void (*l_DebugCallback)(void *, int, const char *) = NULL;
 static void *l_DebugCallContext = NULL;
@@ -68,6 +64,7 @@ static int SwapChannels = 0;
 static int VolIsMuted = 0;
 static int ff = 0;
 static int AudioDevice = -1;
+static unsigned int SAMPLE_BYTES = 0;
 static SDL_AudioFormat orig_format = 0;
 
 // Prototype of local functions
@@ -313,7 +310,7 @@ EXPORT void CALL AiLenChanged( void )
     if (!VolIsMuted && !ff)
     {
         unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
-        unsigned int acceptable_lag = (GameFreq * 0.150) * N64_SAMPLE_BYTES;
+        unsigned int acceptable_lag = (GameFreq * 0.150) * SAMPLE_BYTES;
         unsigned int diff = 0;
         if (audio_queue > acceptable_lag)
         {
@@ -442,12 +439,15 @@ static void InitializeAudio(int freq)
     free(desired);
     hardware_spec=obtained;
 
+    SAMPLE_BYTES = hardware_spec->size / hardware_spec->samples;
+
     DebugMessage(M64MSG_VERBOSE, "Frequency: %i", hardware_spec->freq);
     DebugMessage(M64MSG_VERBOSE, "Format: %i", hardware_spec->format);
     DebugMessage(M64MSG_VERBOSE, "Channels: %i", hardware_spec->channels);
     DebugMessage(M64MSG_VERBOSE, "Silence: %i", hardware_spec->silence);
     DebugMessage(M64MSG_VERBOSE, "Samples: %i", hardware_spec->samples);
     DebugMessage(M64MSG_VERBOSE, "Size: %i", hardware_spec->size);
+    DebugMessage(M64MSG_VERBOSE, "Bytes per sample: %i", SAMPLE_BYTES);
 
     SDL_PauseAudioDevice(dev, 0);
 }
