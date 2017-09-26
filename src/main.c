@@ -344,7 +344,7 @@ EXPORT void CALL AiLenChanged( void )
                 DebugMessage(M64MSG_WARNING, "Skipped %u audio samples to keep in sync.", diff / SAMPLE_BYTES);
             SDL_QueueAudio(dev, output_buffer, output_length - diff);
         }
-        else
+        else if (data.output_frames_gen)
             DebugMessage(M64MSG_WARNING, "Skipped %u audio samples to keep in sync.", data.output_frames_gen);
     }
 }
@@ -428,7 +428,7 @@ static void InitializeAudio(int freq)
     if (AudioDevice >= 0)
         dev_name = SDL_GetAudioDeviceName(AudioDevice, 0);
 
-    dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_ANY_CHANGE);
+    dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
     if (dev == 0)
     {
         DebugMessage(M64MSG_ERROR, "Couldn't open audio: %s", SDL_GetError());
@@ -438,10 +438,6 @@ static void InitializeAudio(int freq)
     if (desired->format != obtained->format)
     {
         DebugMessage(M64MSG_WARNING, "Obtained audio format differs from requested.");
-    }
-    if (desired->freq != obtained->freq)
-    {
-        DebugMessage(M64MSG_WARNING, "Obtained frequency differs from requested.");
     }
 
     /* desired spec is no longer needed */
