@@ -65,7 +65,6 @@ static int VolIsMuted = 0;
 static int ff = 0;
 static int AudioDevice = -1;
 static unsigned int SAMPLE_BYTES = 0;
-static SDL_AudioFormat orig_format = 0;
 
 // Prototype of local functions
 static void InitializeAudio(int freq);
@@ -310,31 +309,22 @@ EXPORT void CALL AiLenChanged( void )
     if (!VolIsMuted && !ff)
     {
         unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
-        unsigned int acceptable_lag = (GameFreq * 0.150) * SAMPLE_BYTES;
+        unsigned int acceptable_lag = (hardware_spec->freq * 0.150) * SAMPLE_BYTES;
         unsigned int diff = 0;
         if (audio_queue > acceptable_lag)
         {
             diff = audio_queue - acceptable_lag;
-            diff &= ~3;
+            diff &= ~(SAMPLE_BYTES - 1);
         }
-        if (LenReg > diff)
-        {
-            if (orig_format)
-            {
-                SDL_AudioCVT cvt;
-                SDL_BuildAudioCVT(&cvt, orig_format, 2, GameFreq, hardware_spec->format, 2, GameFreq);
-                cvt.len = LenReg - diff;
-                cvt.buf = (Uint8 *) malloc(cvt.len * cvt.len_mult);
-                memcpy(cvt.buf, primaryBuffer, cvt.len);
-                SDL_ConvertAudio(&cvt);
-                SDL_QueueAudio(dev, cvt.buf, cvt.len_cvt);
-                free(cvt.buf);
-            }
-            else
-            {
-                SDL_QueueAudio(dev, primaryBuffer, LenReg - diff);
-            }
-        }
+        SDL_AudioCVT cvt;
+        SDL_BuildAudioCVT(&cvt, AUDIO_S16SYS, 2, GameFreq, hardware_spec->format, 2, hardware_spec->freq);
+        cvt.len = LenReg;
+        cvt.buf = (Uint8 *) malloc(cvt.len * cvt.len_mult);
+        memcpy(cvt.buf, primaryBuffer, cvt.len);
+        SDL_ConvertAudio(&cvt);
+        if (cvt.len_cvt > diff)
+            SDL_QueueAudio(dev, cvt.buf, cvt.len_cvt - diff);
+        free(cvt.buf);
     }
 }
 
@@ -401,7 +391,7 @@ static void InitializeAudio(int freq)
 
     DebugMessage(M64MSG_VERBOSE, "Requesting frequency: %iHz.", desired->freq);
     /* 16-bit signed audio */
-    desired->format=AUDIO_S16SYS;
+    desired->format=AUDIO_F32;
     DebugMessage(M64MSG_VERBOSE, "Requesting format: %i.", desired->format);
     /* Stereo */
     desired->channels=2;
@@ -424,11 +414,6 @@ static void InitializeAudio(int freq)
     if (desired->format != obtained->format)
     {
         DebugMessage(M64MSG_WARNING, "Obtained audio format differs from requested.");
-        orig_format = desired->format;
-    }
-    else
-    {
-        orig_format = 0;
     }
     if (desired->freq != obtained->freq)
     {
