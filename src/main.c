@@ -24,6 +24,7 @@
 
 #include <SDL.h>
 #include <SDL_audio.h>
+#include <samplerate.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,6 +57,8 @@ static AUDIO_INFO AudioInfo;
 static SDL_AudioSpec *hardware_spec;
 /* Pointer to the primary audio buffer */
 static unsigned char primaryBuffer[0x40000];
+static float output_buffer[0x40000];
+static float convert_buffer[0x20000];
 /* Audio frequency, this is usually obtained from the game, but for compatibility we set default value */
 static int GameFreq = DEFAULT_FREQUENCY;
 // If this is true then left and right channels are swapped */
@@ -72,6 +75,8 @@ static void ReadConfig(void);
 static void InitializeSDL(void);
 
 static int critical_failure = 0;
+static SRC_STATE *src_state;
+static int error;
 
 /* definitions of pointers to Core config functions */
 ptr_ConfigOpenSection      ConfigOpenSection = NULL;
@@ -219,6 +224,9 @@ EXPORT m64p_error CALL PluginShutdown(void)
     l_DebugCallback = NULL;
     l_DebugCallContext = NULL;
 
+    if (src_state)
+        src_state = src_delete(src_state);
+
     l_PluginInit = 0;
     return M64ERR_SUCCESS;
 }
@@ -269,7 +277,6 @@ EXPORT void CALL AiDacrateChanged( int SystemType )
     InitializeAudio(f);
 }
 
-
 EXPORT void CALL AiLenChanged( void )
 {
     unsigned int LenReg;
@@ -306,6 +313,7 @@ EXPORT void CALL AiLenChanged( void )
             primaryBuffer[ i + 3 ] = p[ i + 3 ];
         }
     }
+
     if (!VolIsMuted && !ff)
     {
         unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
@@ -316,15 +324,29 @@ EXPORT void CALL AiLenChanged( void )
             diff = audio_queue - acceptable_lag;
             diff &= ~(SAMPLE_BYTES - 1);
         }
-        SDL_AudioCVT cvt;
-        SDL_BuildAudioCVT(&cvt, AUDIO_S16SYS, 2, GameFreq, hardware_spec->format, 2, hardware_spec->freq);
-        cvt.len = LenReg;
-        cvt.buf = (Uint8 *) malloc(cvt.len * cvt.len_mult);
-        memcpy(cvt.buf, primaryBuffer, cvt.len);
-        SDL_ConvertAudio(&cvt);
-        if (cvt.len_cvt > diff)
-            SDL_QueueAudio(dev, cvt.buf, cvt.len_cvt - diff);
-        free(cvt.buf);
+
+        src_short_to_float_array ((short*)primaryBuffer, convert_buffer, LenReg / 2) ;
+        SRC_DATA data;
+        data.data_in = convert_buffer;
+        data.input_frames = LenReg / 4;
+        data.data_out = output_buffer;
+        data.output_frames = sizeof(output_buffer) / SAMPLE_BYTES;
+        data.src_ratio = (float)hardware_spec->freq / GameFreq;
+        data.end_of_input = 0;
+
+        src_process(src_state, &data);
+
+        if (data.input_frames_used * 4 != LenReg) DebugMessage(M64MSG_WARNING, "Resampler missed some audio bytes.");
+
+        unsigned int output_length = data.output_frames_gen * SAMPLE_BYTES;
+        if (output_length > diff)
+        {
+            if (diff)
+                DebugMessage(M64MSG_WARNING, "Skipped %u audio samples to keep in sync.", diff / SAMPLE_BYTES);
+            SDL_QueueAudio(dev, output_buffer, output_length - diff);
+        }
+        else
+            DebugMessage(M64MSG_WARNING, "Skipped %u audio samples to keep in sync.", data.output_frames_gen);
     }
 }
 
@@ -387,7 +409,9 @@ static void InitializeAudio(int freq)
     desired = malloc(sizeof(SDL_AudioSpec));
     obtained = malloc(sizeof(SDL_AudioSpec));
 
-    desired->freq = GameFreq;
+    if(freq < 11025) desired->freq = 11025;
+    else if(freq < 22050) desired->freq = 22050;
+    else desired->freq = 44100;
 
     DebugMessage(M64MSG_VERBOSE, "Requesting frequency: %iHz.", desired->freq);
     /* 16-bit signed audio */
@@ -404,7 +428,7 @@ static void InitializeAudio(int freq)
     if (AudioDevice >= 0)
         dev_name = SDL_GetAudioDeviceName(AudioDevice, 0);
 
-    dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_FORMAT_CHANGE);
+    dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_ANY_CHANGE);
     if (dev == 0)
     {
         DebugMessage(M64MSG_ERROR, "Couldn't open audio: %s", SDL_GetError());
@@ -433,6 +457,11 @@ static void InitializeAudio(int freq)
     DebugMessage(M64MSG_VERBOSE, "Samples: %i", hardware_spec->samples);
     DebugMessage(M64MSG_VERBOSE, "Size: %i", hardware_spec->size);
     DebugMessage(M64MSG_VERBOSE, "Bytes per sample: %i", SAMPLE_BYTES);
+
+    if (src_state)
+        src_state = src_delete(src_state);
+
+    src_state = src_new (SRC_SINC_BEST_QUALITY, 2, &error);
 
     SDL_PauseAudioDevice(dev, 0);
 }

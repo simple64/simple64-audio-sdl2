@@ -159,6 +159,11 @@ ifeq ($(origin PKG_CONFIG), undefined)
   endif
 endif
 
+SRC_CFLAGS += $(shell $(PKG_CONFIG) samplerate --cflags)
+SRC_LDLIBS += $(shell $(PKG_CONFIG) samplerate --libs)
+CFLAGS += $(SRC_CFLAGS)
+LDLIBS += $(SRC_LDLIBS)
+
 # set mupen64plus core API header path
 ifneq ("$(APIDIR)","")
   CFLAGS += "-I$(APIDIR)"
