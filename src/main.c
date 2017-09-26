@@ -57,7 +57,7 @@ static AUDIO_INFO AudioInfo;
 static SDL_AudioSpec *hardware_spec;
 /* Pointer to the primary audio buffer */
 static unsigned char primaryBuffer[0x40000];
-static float output_buffer[0x40000];
+static float output_buffer[0x20000];
 static float convert_buffer[0x20000];
 /* Audio frequency, this is usually obtained from the game, but for compatibility we set default value */
 static int GameFreq = DEFAULT_FREQUENCY;
@@ -316,15 +316,6 @@ EXPORT void CALL AiLenChanged( void )
 
     if (!VolIsMuted && !ff)
     {
-        unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
-        unsigned int acceptable_lag = (hardware_spec->freq * 0.150) * SAMPLE_BYTES;
-        unsigned int diff = 0;
-        if (audio_queue > acceptable_lag)
-        {
-            diff = audio_queue - acceptable_lag;
-            diff &= ~(SAMPLE_BYTES - 1);
-        }
-
         src_short_to_float_array ((short*)primaryBuffer, convert_buffer, LenReg / 2) ;
         SRC_DATA data;
         data.data_in = convert_buffer;
@@ -338,6 +329,14 @@ EXPORT void CALL AiLenChanged( void )
 
         if (data.input_frames_used * 4 != LenReg) DebugMessage(M64MSG_WARNING, "Resampler missed some audio bytes.");
 
+        unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
+        unsigned int acceptable_lag = (hardware_spec->freq * 0.150) * SAMPLE_BYTES;
+        unsigned int diff = 0;
+        if (audio_queue > acceptable_lag)
+        {
+            diff = audio_queue - acceptable_lag;
+            diff &= ~(SAMPLE_BYTES - 1);
+        }
         unsigned int output_length = data.output_frames_gen * SAMPLE_BYTES;
         if (output_length > diff)
         {
