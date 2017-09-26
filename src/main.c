@@ -330,11 +330,11 @@ EXPORT void CALL AiLenChanged( void )
         if (data.input_frames_used * 4 != LenReg) DebugMessage(M64MSG_WARNING, "Resampler missed some audio bytes.");
 
         unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
-        unsigned int acceptable_lag = (hardware_spec->freq * 0.150) * SAMPLE_BYTES;
+        unsigned int acceptable_latency = (hardware_spec->freq * 0.300) * SAMPLE_BYTES;
         unsigned int diff = 0;
-        if (audio_queue > acceptable_lag)
+        if (audio_queue > acceptable_latency)
         {
-            diff = audio_queue - acceptable_lag;
+            diff = audio_queue - acceptable_latency;
             diff &= ~(SAMPLE_BYTES - 1);
         }
         unsigned int output_length = data.output_frames_gen * SAMPLE_BYTES;
@@ -392,6 +392,7 @@ static void InitializeAudio(int freq)
     if(SDL_WasInit(SDL_INIT_AUDIO) == (SDL_INIT_AUDIO))
     {
         DebugMessage(M64MSG_VERBOSE, "InitializeAudio(): SDL2 Audio sub-system already initialized.");
+        SDL_ClearQueuedAudio(dev);
         SDL_CloseAudioDevice(dev);
     }
     else
@@ -472,6 +473,7 @@ EXPORT void CALL RomClosed( void )
        return;
     DebugMessage(M64MSG_VERBOSE, "Cleaning up SDL sound plugin...");
 
+    SDL_ClearQueuedAudio(dev);
     // Shut down SDL Audio output
     SDL_CloseAudioDevice(dev);
 
