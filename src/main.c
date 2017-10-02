@@ -341,11 +341,11 @@ EXPORT void CALL AiLenChanged( void )
         if (output_length > diff)
         {
             if (diff)
-                DebugMessage(M64MSG_WARNING, "Skipped %u audio samples to keep in sync.", diff / SAMPLE_BYTES);
+                DebugMessage(M64MSG_VERBOSE, "Skipped %u audio samples to keep in sync.", diff / SAMPLE_BYTES);
             SDL_QueueAudio(dev, output_buffer, output_length - diff);
         }
         else if (data.output_frames_gen)
-            DebugMessage(M64MSG_WARNING, "Skipped %u audio samples to keep in sync.", data.output_frames_gen);
+            DebugMessage(M64MSG_VERBOSE, "Skipped %u audio samples to keep in sync.", data.output_frames_gen);
     }
 }
 
