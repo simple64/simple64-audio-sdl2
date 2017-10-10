@@ -100,7 +100,7 @@
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x86\SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x86\SDL2.lib;..\..\samplerate\x86\libsamplerate-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
@@ -120,7 +120,7 @@
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x64\SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x64\SDL2.lib;..\..\samplerate\x64\libsamplerate-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>
@@ -137,7 +137,7 @@
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x86\SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x86\SDL2.lib;..\..\samplerate\x86\libsamplerate-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
@@ -157,7 +157,7 @@
       <CompileAs>Default</CompileAs>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x64\SDL2.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>..\..\..\mupen64plus-win32-deps\SDL2-2.0.6\lib\x64\SDL2.lib;..\..\samplerate\x64\libsamplerate-0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
