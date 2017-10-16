@@ -68,6 +68,8 @@ static int VolIsMuted = 0;
 static int ff = 0;
 static int AudioDevice = -1;
 static unsigned int SAMPLE_BYTES = 0;
+static unsigned int BufferSize = 0;
+static float MaxLatency = 0.0;
 
 // Prototype of local functions
 static void InitializeAudio(int freq);
@@ -204,6 +206,8 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
     ConfigSetDefaultInt(l_ConfigAudio, "DEFAULT_FREQUENCY",     DEFAULT_FREQUENCY,     "Frequency which is used if rom doesn't want to change it");
     ConfigSetDefaultBool(l_ConfigAudio, "SWAP_CHANNELS",        0,                     "Swaps left and right channels");
     ConfigSetDefaultInt(l_ConfigAudio, "AUDIO_DEVICE", -1, "ID of audio playback device, -1 for default");
+    ConfigSetDefaultInt(l_ConfigAudio, "BUFFER_SIZE", 1024, "Size of SDL buffer in output samples. This should be a power of two between 512 and 8192.");
+    ConfigSetDefaultInt(l_ConfigAudio, "MAX_LATENCY", 300, "Maximum allowable latency in ms.");
 
     if (bSaveConfig && ConfigAPIVersion >= 0x020100)
         ConfigSaveSection("Audio-SDL2");
@@ -330,7 +334,7 @@ EXPORT void CALL AiLenChanged( void )
         if (data.input_frames_used * 4 != LenReg) DebugMessage(M64MSG_WARNING, "Resampler missed some audio bytes.");
 
         unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
-        unsigned int acceptable_latency = (hardware_spec->freq * 0.300) * SAMPLE_BYTES;
+        unsigned int acceptable_latency = (hardware_spec->freq * MaxLatency) * SAMPLE_BYTES;
         unsigned int diff = 0;
         if (audio_queue > acceptable_latency)
         {
@@ -419,7 +423,7 @@ static void InitializeAudio(int freq)
     DebugMessage(M64MSG_VERBOSE, "Requesting format: %i.", desired->format);
     /* Stereo */
     desired->channels=2;
-    desired->samples = 1024;
+    desired->samples = BufferSize;
     desired->callback = NULL;
     desired->userdata = NULL;
 
@@ -499,6 +503,9 @@ static void ReadConfig(void)
     GameFreq = ConfigGetParamInt(l_ConfigAudio, "DEFAULT_FREQUENCY");
     SwapChannels = ConfigGetParamBool(l_ConfigAudio, "SWAP_CHANNELS");
     AudioDevice = ConfigGetParamInt(l_ConfigAudio, "AUDIO_DEVICE");
+    BufferSize = ConfigGetParamInt(l_ConfigAudio, "BUFFER_SIZE");
+    unsigned int max_latency = ConfigGetParamInt(l_ConfigAudio, "MAX_LATENCY");
+    MaxLatency = max_latency / 1000.0;
 }
 
 EXPORT void CALL VolumeMute(void)
