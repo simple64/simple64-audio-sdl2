@@ -426,12 +426,9 @@ static void InitializeAudio(int freq)
     desired = malloc(sizeof(SDL_AudioSpec));
     obtained = malloc(sizeof(SDL_AudioSpec));
 
-    if(freq < 11025) desired->freq = 11025;
-    else if(freq < 22050) desired->freq = 22050;
-    else desired->freq = 44100;
-
+    desired->freq = 48000;
     DebugMessage(M64MSG_VERBOSE, "Requesting frequency: %iHz.", desired->freq);
-    /* 16-bit signed audio */
+
     desired->format=AUDIO_F32;
     DebugMessage(M64MSG_VERBOSE, "Requesting format: %i.", desired->format);
     /* Stereo */
