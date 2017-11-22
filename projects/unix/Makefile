@@ -120,7 +120,7 @@ ifeq ($(OS), LINUX)
 endif
 ifeq ($(OS), OSX)
   #xcode-select has been around since XCode 3.0, i.e. OS X 10.5
-  OSX_SDK_PATH = $(shell xcrun --sdk macosx —show-sdk-path)
+  OSX_SDK_PATH = $(shell xcrun --sdk macosx --show-sdk-path)
 
   ifeq ($(CPU), X86)
     ifeq ($(ARCH_DETECTED), 64BITS)
