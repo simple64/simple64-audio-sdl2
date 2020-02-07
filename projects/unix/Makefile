@@ -236,12 +236,6 @@ OBJDIR = _obj$(POSTFIX)
 SOURCE = \
 	$(SRCDIR)/main.c
 
-ifeq ($(OS),MINGW)
-SOURCE += $(SRCDIR)/osal_dynamiclib_win32.c
-else
-SOURCE += $(SRCDIR)/osal_dynamiclib_unix.c
-endif
-
 # generate a list of object files build, make a temporary directory for them
 OBJECTS := $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(filter %.c, $(SOURCE)))
 OBJDIRS = $(dir $(OBJECTS))
