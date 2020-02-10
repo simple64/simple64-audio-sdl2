@@ -123,7 +123,18 @@ EXPORT void CALL AiLenChanged( void )
         data.end_of_input = 0;
 
         src_process(src_state, &data);
-        SDL_QueueAudio(dev, output_buffer, data.output_frames_gen * 8);
+        
+        unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
+        unsigned int acceptable_latency = (hardware_spec->freq * 0.300) * 8;
+        unsigned int diff = 0;
+        if (audio_queue > acceptable_latency)
+        {
+            diff = audio_queue - acceptable_latency;
+            diff &= ~7;
+        }
+        unsigned int output_length = data.output_frames_gen * 8;
+        if (output_length > diff)
+            SDL_QueueAudio(dev, output_buffer, output_length - diff);
     }
 }
 
