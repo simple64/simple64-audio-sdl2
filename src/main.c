@@ -191,7 +191,7 @@ EXPORT int CALL RomOpen(void)
         src_state = src_delete(src_state);
 
     int error;
-    src_state = src_new (SRC_SINC_BEST_QUALITY, 2, &error);
+    src_state = src_new (SRC_SINC_MEDIUM_QUALITY, 2, &error);
 
     return 1;
 }
