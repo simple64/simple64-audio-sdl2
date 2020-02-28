@@ -130,8 +130,9 @@ EXPORT void CALL AiDacrateChanged( int SystemType )
             GameFreq = 48628316 / (*AudioInfo.AI_DACRATE_REG + 1);
             break;
     }
-    CloseAudio();
-    InitAudio();
+    if (src_state) src_state = src_delete(src_state);
+    int error;
+    src_state = src_new (SRC_SINC_MEDIUM_QUALITY, 2, &error);
 }
 
 EXPORT void CALL AiLenChanged( void )
