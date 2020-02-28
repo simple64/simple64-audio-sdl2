@@ -31,6 +31,7 @@ EXPORT m64p_error CALL PluginStartup(m64p_dynlib_handle CoreLibHandle, void *Con
     SDL_Init(SDL_INIT_AUDIO);
     l_PluginInit = 1;
     VolIsMuted = 0;
+    ff = 0;
 
     return M64ERR_SUCCESS;
 }
@@ -40,8 +41,11 @@ EXPORT m64p_error CALL PluginShutdown(void)
     if (!l_PluginInit)
         return M64ERR_NOT_INIT;
 
-    if (src_state)
-        src_state = src_delete(src_state);
+    if(hardware_spec != NULL) free(hardware_spec);
+    hardware_spec = NULL;
+
+    if (src_state) src_state = src_delete(src_state);
+    src_state = NULL;
 
     SDL_QuitSubSystem(SDL_INIT_AUDIO);
     l_PluginInit = 0;
@@ -72,6 +76,43 @@ EXPORT m64p_error CALL PluginGetVersion(m64p_plugin_type *PluginType, int *Plugi
     return M64ERR_SUCCESS;
 }
 
+void InitAudio()
+{
+    SDL_AudioSpec *desired, *obtained;
+    if(hardware_spec != NULL) free(hardware_spec);
+    desired = malloc(sizeof(SDL_AudioSpec));
+    obtained = malloc(sizeof(SDL_AudioSpec));
+    desired->freq = 48000;
+    desired->format=AUDIO_F32;
+    desired->channels=2;
+    desired->samples = 1024;
+    desired->callback = NULL;
+    desired->userdata = NULL;
+
+    const char *dev_name = SDL_GetAudioDeviceName(-1, 0);
+    dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
+    free(desired);
+    hardware_spec=obtained;
+    SDL_PauseAudioDevice(dev, 0);
+    paused = 0;
+
+    if (src_state) src_state = src_delete(src_state);
+    int error;
+    src_state = src_new (SRC_SINC_MEDIUM_QUALITY, 2, &error);
+}
+
+void CloseAudio()
+{
+    SDL_ClearQueuedAudio(dev);
+    SDL_CloseAudioDevice(dev);
+
+    if(hardware_spec != NULL) free(hardware_spec);
+    hardware_spec = NULL;
+
+    if (src_state) src_state = src_delete(src_state);
+    src_state = NULL;
+}
+
 EXPORT void CALL AiDacrateChanged( int SystemType )
 {
     if (!l_PluginInit)
@@ -89,6 +130,8 @@ EXPORT void CALL AiDacrateChanged( int SystemType )
             GameFreq = 48628316 / (*AudioInfo.AI_DACRATE_REG + 1);
             break;
     }
+    CloseAudio();
+    InitAudio();
 }
 
 EXPORT void CALL AiLenChanged( void )
@@ -167,31 +210,7 @@ EXPORT int CALL RomOpen(void)
     if (!l_PluginInit)
         return 0;
 
-    SDL_AudioSpec *desired, *obtained;
-    if(hardware_spec != NULL) free(hardware_spec);
-    desired = malloc(sizeof(SDL_AudioSpec));
-    obtained = malloc(sizeof(SDL_AudioSpec));
-    desired->freq = 48000;
-    desired->format=AUDIO_F32;
-    desired->channels=2;
-    desired->samples = 1024;
-    desired->callback = NULL;
-    desired->userdata = NULL;
-
-    const char *dev_name = SDL_GetAudioDeviceName(-1, 0);
-    dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
-    free(desired);
-    hardware_spec=obtained;
-    SDL_PauseAudioDevice(dev, 0);
-    paused = 0;
-
-    ff = 0;
-
-    if (src_state)
-        src_state = src_delete(src_state);
-
-    int error;
-    src_state = src_new (SRC_SINC_MEDIUM_QUALITY, 2, &error);
+    InitAudio();
 
     return 1;
 }
@@ -201,11 +220,7 @@ EXPORT void CALL RomClosed( void )
     if (!l_PluginInit)
         return;
 
-    if(hardware_spec != NULL) free(hardware_spec);
-    hardware_spec = NULL;
-
-    SDL_ClearQueuedAudio(dev);
-    SDL_CloseAudioDevice(dev);
+    CloseAudio();
 }
 
 EXPORT void CALL ProcessAList(void)
