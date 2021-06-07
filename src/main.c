@@ -20,7 +20,6 @@ static float output_buffer[0x20000];
 static float mix_buffer[0x20000];
 static float convert_buffer[0x20000];
 static int VolIsMuted = 0;
-static unsigned int paused = 0;
 static int ff = 0;
 static SRC_STATE *src_state;
 static int VolSDL = SDL_MIX_MAXVOLUME;
@@ -96,7 +95,6 @@ void InitAudio()
     free(desired);
     hardware_spec=obtained;
     SDL_PauseAudioDevice(dev, 0);
-    paused = 0;
 
     if (src_state) src_state = src_delete(src_state);
     int error;
@@ -171,33 +169,13 @@ EXPORT void CALL AiLenChanged( void )
 
         src_process(src_state, &data);
         
-        unsigned int audio_queue = SDL_GetQueuedAudioSize(dev);
         unsigned int acceptable_latency = (hardware_spec->freq * 0.200) * 8;
-        unsigned int min_latency = (hardware_spec->freq * 0.020) * 8;
-        unsigned int diff = 0;
-        if (audio_queue > acceptable_latency)
-        {
-            diff = audio_queue - acceptable_latency;
-            diff &= ~7;
-        }
-        else if (!paused && audio_queue < min_latency)
-        {
-            SDL_PauseAudioDevice(dev, 1);
-            paused = 1;
-        }
-        else if (paused && audio_queue >= min_latency)
-        {
-            SDL_PauseAudioDevice(dev, 0);
-            paused = 0;
-        }
-
         unsigned int output_length = data.output_frames_gen * 8;
-        if (output_length > diff)
+        if (SDL_GetQueuedAudioSize(dev) < acceptable_latency)
         {
-            int len = output_length - diff;
-            SDL_memset(mix_buffer, 0, len);
-            SDL_MixAudioFormat((Uint8*)mix_buffer, (Uint8*)output_buffer, AUDIO_F32, len, VolSDL);
-            SDL_QueueAudio(dev, mix_buffer, len);
+            SDL_memset(mix_buffer, 0, output_length);
+            SDL_MixAudioFormat((Uint8*)mix_buffer, (Uint8*)output_buffer, AUDIO_F32, output_length, VolSDL);
+            SDL_QueueAudio(dev, mix_buffer, output_length);
         }
     }
 }
