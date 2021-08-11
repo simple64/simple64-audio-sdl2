@@ -90,7 +90,7 @@ void InitAudio()
     dev = SDL_OpenAudioDevice(dev_name, 0, desired, obtained, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE);
     free(desired);
     hardware_spec = obtained;
-    VolSDL = SDL_MIX_MAXVOLUME
+    VolSDL = SDL_MIX_MAXVOLUME;
     SDL_PauseAudioDevice(dev, 0);
     paused = 0;
     audio_stream = SDL_NewAudioStream(AUDIO_S16SYS, 2, GameFreq, hardware_spec->format, 2, hardware_spec->freq);
