@@ -82,7 +82,7 @@ void InitAudio()
     desired->freq = 44100;
     desired->format = AUDIO_S16SYS;
     desired->channels = 2;
-    desired->samples = 1024;
+    desired->samples = 16;
     desired->callback = NULL;
     desired->userdata = NULL;
 
